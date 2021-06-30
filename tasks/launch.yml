@@ -1,0 +1,68 @@
+---
+- name: 1.1 | launch.yml | Find the latest stable AMI of RHEL v8
+  ec2_ami_info:
+    owners: 309956199498
+    filters:
+      name: "RHEL-{{ rhel8_version }}_HVM-*x86_64*"
+    region: "{{ region }}"
+  register: red_hat_rhel8_amis
+  tags:
+    - ec2
+    - launch
+
+- name: 1.2.0 | launch.yml | Create an AWS security group
+  ec2_group_info:
+    filters:
+      # We need to get the group_id of the AWX security group to be used as a source
+      group-name: "allow_web_and_ssh"
+    region: "{{ region }}"
+  register: awx_group_info
+  tags:
+    - security_group
+    - launch
+
+- name: 1.2.1 | launch.yml | Create an AWS security group
+  ec2_vpc_subnet_info:
+    filters:
+      # We need to find the VPC ID where AWX is currently deployed
+      "tag:Name": "awx-private"
+    region: "{{ region }}"
+  register: awx_subnet_info
+  tags:
+    - security_group
+    - launch
+
+- name: 1.2.2 | launch.yml | Create an AWS security group
+  ec2_group:
+    name: "allow_ssh_from_awx"
+    description: "Allow SSH from AWX"
+    vpc_id: "{{ awx_subnet_info.subnets[0].vpc_id }}"
+    rules:
+      - proto: tcp
+        ports: 22
+        group_id: "{{ awx_group_info.security_groups[0].group_id }}"
+        rule_desc: "Allow SSH from AWX"
+    region: "{{ region }}"
+    tags: "{{ aws_tags | items2dict }}"
+  register: managed_security_group
+  tags:
+    - security_group
+    - launch
+
+- name: 1.3 | launch.yml | Launch AWS EC2 machine(s)
+  ec2_instance:
+    name: "managed-{{ item }}"
+    key_name: "{{ key_name }}"
+    vpc_subnet_id: "{{ awx_subnet_info.subnets[0].id }}"
+    instance_type: "{{ instance_type }}"
+    security_group: "{{ managed_security_group.group_id }}"
+    network:
+      assign_public_ip: false
+    image_id: "{{ red_hat_rhel8_amis.images[0].image_id }}"
+    region: "{{ region }}"
+    wait: false
+    tags: "{{ aws_tags | items2dict }}"
+  with_sequence: count="{{ quantity }}"
+  tags:
+    - ec2
+    - launch

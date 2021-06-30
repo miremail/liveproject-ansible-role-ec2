@@ -1,0 +1,9 @@
+---
+# tasks file for liveproject-ansible-role-ec2
+- name: 1.0 | main.yml | Include tasks from launch.yml
+  include_tasks: launch.yml
+  when: mode == "create"
+
+- name: 2.0 | main.yml | Include task from terminate.yml
+  include_tasks: terminate.yml
+  when: mode == "terminate"

@@ -1,0 +1,31 @@
+---
+- name: 2.1 | terminate.yml | Remove all AWS EC2 machines that are named `managed`
+  ec2_instance:
+    state: absent
+    filters:
+      tag:Name: "managed*"
+    region: "{{ region }}"
+  tags:
+    - ec2
+    - terminate
+
+- name: 2.2.0 | terminate.yml | Remove AWS security group that is named `allow_ssh_from_awx`
+  ec2_vpc_subnet_info:
+    filters:
+      "tag:Name": "awx-private"
+    region: "{{ region }}"
+  register: awx_subnet_info
+  tags:
+    - security_group
+    - terminate
+
+- name: 2.2.1 | terminate.yml | Remove AWS security group that is named `allow_ssh_from_awx`
+  ec2_group:
+    name: "allow_ssh_from_awx"
+    description: "Allow SSH from AWX"
+    vpc_id: "{{ awx_subnet_info.subnets[0].vpc_id }}"
+    state: absent
+    region: "{{ region }}"
+  tags:
+    - security_group
+    - terminate
