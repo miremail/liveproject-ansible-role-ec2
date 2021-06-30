@@ -1,6 +1,6 @@
 ---
 # vars file for liveproject-ansible-role-ec2
-key_name: "liveproject"
+key_name: "liveproject1"
 rhel8_version: "8.2"
 instance_type: "t2.small"
 aws_tags:
